@@ -1,0 +1,164 @@
+{
+    "system_id": "bk_paas",
+    "operations": [
+        {
+            "operation": "upsert_system",
+            "data":{
+                "id": "bk_paas",
+                "name": "PaaS平台",
+                "name_en": "PaaS",
+                "description": "蓝鲸智云PaaS平台是一个开放式的开发平台，让开发者可以方便快捷地创建、开发、部署和管理SaaS应用。",
+                "description_en": "The BlueKing PaaS is an open development platform that allows developers to create, develop, deploy and manage SaaS applications quickly and easily.",
+                "clients": "bk_paas",
+                "provider_config": {
+                    "host": "http://paas.service.consul",
+                    "auth": "basic",
+                    "healthz": "/healthz/"
+                }
+            }
+        },
+        {
+            "operation": "upsert_resource_type",
+            "data": {
+                "id": "app",
+                "name": "SaaS应用及外链应用",
+                "name_en": "application",
+                "description": "SaaS应用及外链应用",
+                "description_en": "SaaS application and ext-lint application",
+                "provider_config": {
+                    "path": "/iam/api/v1/resources/"
+                },
+                "version": 1
+            }
+        },
+        {
+            "operation": "upsert_action",
+            "data": {
+                "id": "access_developer_center",
+                "name": "访问开发者中心",
+                "name_en": "access developer center",
+                "description": "一个用户是否能访问开发者中心",
+                "description_en": "Is allowed to access the developer center",
+                "type": "create",
+                "related_resource_types": [],
+                "version": 1
+            }
+        },
+        {
+            "operation": "upsert_action",
+            "data": {
+                "id": "manage_smart",
+                "name": "管理Smart应用",
+                "name_en": "manage smart",
+                "description": "一个用户可以管理所有的smart应用",
+                "description_en": "Is allowed to manage all smart apps",
+                "type": "",
+                "related_actions": ["access_developer_center"],
+                "related_resource_types": [],
+                "version": 1
+            }
+        },
+        {
+            "operation": "upsert_action",
+            "data": {
+                "id": "ops_system",
+                "name": "系统维护",
+                "name_en": "system ops",
+                "description": "一个用户可以对PaaS进行系统维护",
+                "description_en": "Is the ops of the paas system",
+                "type": "",
+                "related_actions": ["access_developer_center"],
+                "related_resource_types": [],
+                "version": 1
+            }
+        },
+        {
+            "operation": "upsert_action",
+            "data": {
+                "id": "manage_apigateway",
+                "name": "API网关维护",
+                "name_en": "manage apigateway",
+                "description": "一个用户可以维护api网关",
+                "description_en": "Is the manager of API Gateway",
+                "type": "",
+                "related_actions": ["access_developer_center"],
+                "related_resource_types": [],
+                "version": 1
+            }
+        },
+        {
+            "operation": "upsert_instance_selection",
+            "data": {
+                "id": "app_view",
+                "name": "应用视图",
+                "name_en": "app_view",
+                "resource_type_chain": [{"system_id": "bk_paas", "id": "app"}]
+            }
+        },
+        {
+            "operation": "upsert_action",
+            "data": {
+                "id": "develop_app",
+                "name": "开发SaaS应用及外链应用",
+                "name_en": "develop app",
+                "description": "一个用户是否能够开发SaaS 及外链应用",
+                "description_en": "Is allowed to develop SaaS app and ext-link app",
+                "type": "",
+                "related_actions": ["access_developer_center"],
+                "related_resource_types": [
+                    {
+                        "system_id": "bk_paas",
+                        "id": "app",
+                        "name_alias":  "",
+                        "name_alias_en": "",
+                        "related_instance_selections": [
+                            {
+                                "system_id": "bk_paas",
+                                "id": "app_view"
+                            }
+                        ]
+                    }
+                ],
+                "version": 1
+            }
+        },
+        {
+            "operation": "upsert_action_groups",
+            "data": [
+                {
+                    "name": "访问权限",
+                    "name_en": "Access Permissions",
+                    "actions": [
+                        {
+                            "id": "access_developer_center"
+                        }
+                    ]
+                },
+                {
+                    "name": "开发者权限",
+                    "name_en": "Developer Permissions",
+                    "actions": [
+                        {
+                            "id": "develop_app"
+                        }
+                    ]
+                },
+                {
+                    "name": "管理权限",
+                    "name_en": "Admin Permissions",
+                    "actions": [
+                        {
+                            "id": "manage_smart"
+                        },
+                        {
+                            "id": "ops_system"
+                        },
+                        {
+                            "id": "manage_apigateway"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

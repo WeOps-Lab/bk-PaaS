@@ -1,0 +1,21 @@
+{
+    "system_id": "bk_paas",
+    "operations": [
+        {
+            "operation": "upsert_resource_creator_actions",
+            "data":{
+                "config": [
+                    {
+                        "id": "app",
+                        "actions": [
+                            {
+                                "id": "develop_app",
+                                "required": true
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}

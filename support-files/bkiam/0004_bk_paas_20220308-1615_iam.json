@@ -1,0 +1,60 @@
+{
+    "system_id": "bk_paas",
+    "operations": [
+        {
+            "operation": "upsert_resource_type",
+            "data": {
+                "id": "app",
+                "name": "应用",
+                "name_en": "application",
+                "description": "包括: 我的应用, S-mart应用及外链应用",
+                "description_en": "Include: My application, S-mart application and ext-lint application",
+                "provider_config": {
+                    "path": "/iam/api/v1/resources/"
+                },
+                "version": 1
+            }
+        },
+        {
+            "operation": "upsert_action",
+            "data": {
+                "id": "manage_smart",
+                "name": "Smart应用上传及查看列表",
+                "name_en": "upload smart",
+                "description": "一个用户可以上传smart应用及查看S-mart应用列表",
+                "description_en": "Is allowed to upload s-mart app and see the list",
+                "type": "",
+                "related_actions": ["access_developer_center"],
+                "related_resource_types": [],
+                "version": 1
+            }
+        },
+        {
+            "operation": "upsert_action",
+            "data": {
+                "id": "develop_app",
+                "name": "管理应用",
+                "name_en": "manage app",
+                "description": "一个用户是否能够管理某个应用",
+                "description_en": "Is allowed to maintain an app",
+                "type": "",
+                "related_actions": ["access_developer_center"],
+                "related_resource_types": [
+                    {
+                        "system_id": "bk_paas",
+                        "id": "app",
+                        "name_alias":  "",
+                        "name_alias_en": "",
+                        "related_instance_selections": [
+                            {
+                                "system_id": "bk_paas",
+                                "id": "app_view"
+                            }
+                        ]
+                    }
+                ],
+                "version": 1
+            }
+        }
+    ]
+}

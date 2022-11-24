@@ -1,0 +1,12 @@
+{
+    "system_id": "bk_paas",
+    "operations": [
+        {
+            "operation": "upsert_system",
+            "data":{
+                "id": "bk_paas",
+                "clients": "bk_paas,bk_paas3"
+            }
+        }
+    ]
+}
