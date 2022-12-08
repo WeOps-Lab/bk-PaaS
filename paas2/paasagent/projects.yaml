@@ -1,0 +1,7 @@
+- name: paas_agent
+  module: paas_agent
+  project_dir: paas_agent/paas_agent
+  alias: paas_agent
+  language: golang
+  version: 3.2.4 
+  version_type: ce

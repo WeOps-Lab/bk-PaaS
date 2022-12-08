@@ -17,3 +17,19 @@ release:
 	cp -Rf ./support-files /opt/open_paas &&\
 	cd /opt/  &&\
 	tar -zcvf ./open_paas_ce-2.14.33-bkofficial.tar.gz open_paas/
+
+release-agent:
+	rm -Rf /opt/paas_agent    &&\
+	mkdir -p /opt/paas_agent &&\
+	cd ./paas2/paasagent/  &&\
+	cp -Rf ./projects.yaml /opt/paas_agent &&\
+	cp -Rf ./README.md /opt/paas_agent &&\
+	cp -Rf ./support-files /opt/paas_agent &&\
+	cp -Rf ./VERSION /opt/paas_agent &&\
+	mkdir -p /opt/paas_agent/paas_agent &&\
+	mkdir -p /opt/paas_agent/paas_agent/lib &&\
+	cp -Rf ./etc /opt/paas_agent/paas_agent &&\
+	mkdir -p /opt/paas_agent/paas_agent/bin &&\
+	cp -Rf ./bin/paas_agent /opt/paas_agent/paas_agent/bin &&\
+	cd /opt  &&\
+	tar -zcvf paas_agent_ce-3.2.4.tgz paas_agent/
