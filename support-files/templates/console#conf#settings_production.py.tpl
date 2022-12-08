@@ -72,3 +72,6 @@ BK_PAAS3_URL = '__BK_PAAS3_URL__'
 BK_APIGW_URL = '__BK_APIGW_URL__'
 # API 网关文档中心地址
 BK_APIGW_DOC_URL = '__BK_APIGW_DOC_URL__'
+
+#TODO: 暂时固定版本号
+BK_VERSION='2.4.12'
