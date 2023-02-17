@@ -41,6 +41,7 @@ paas:
 	
 	virtualenv $(VENV_PATH) -p python3
 	$(VENV_PATH)/bin/pip3 install setuptools==57.5.0
+	
 	$(VENV_PATH)/bin/pip3 download -r $(PAAS_RELEASE_PATH)/esb/requirements.txt --dest $(PAAS_RELEASE_PATH)/support-files/pkgs
 	$(VENV_PATH)/bin/pip3 download -r $(PAAS_RELEASE_PATH)/paas/requirements.txt --dest $(PAAS_RELEASE_PATH)/support-files/pkgs
 	$(VENV_PATH)/bin/pip3 download -r $(PAAS_RELEASE_PATH)/appengine/requirements.txt --dest $(PAAS_RELEASE_PATH)/support-files/pkgs
