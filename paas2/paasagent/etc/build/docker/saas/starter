@@ -3,7 +3,7 @@ exec 2>&1
 if_fail_then_exit() {
     if [ "$1" != "0" ]; then
         echo "$2"
-        exit $1
+        exit
     fi
 }
 
@@ -18,8 +18,36 @@ PYTHON_BIN_PATH="/cache/.bk/env/bin/"
 
 cd $CODE_PATH
 
+# BK_ENCRYPTED\BK_FILE_PATH\BK_CRYPT_VERSION变量是从buildsaas脚本里的docker run通过--env传入的
+if [[ $BK_ENCRYPTED = "true" ]]; then
+    echo "----ENCRYPTED SaaS-------------"
+    ( cd $PYTHON_BIN_PATH
+    if [[ -f ./python2.7_e ]]; then
+        ln -sf ./python2.7_e python
+    elif [[ -f ./python3.6_e ]]; then
+        ln -sf ./python3.6_e python
+        ln -sf ./python3.6_e python3
+    else
+        echo "no encrypted python binary found under $PYTHON_BIN_PATH"
+        exit 1
+    fi
+    )
+    # 使用加密的python前，需要指定BK_ENV_FILE的环境变量指向priv文件的绝对路径
+    export BK_FILE_PATH=$CODE_PATH/conf/saas_priv.txt
+    if [ "$BK_CRYPT_VERSION" == '2' ]; then
+        export ENV_DEVELOPER_PRIVKEY_PATH=$CODE_PATH/conf/${BK_DEVELOPER_CODE}_priv.key
+        if [ ! -f "${ENV_DEVELOPER_PRIVKEY_PATH}" ]; then
+            echo "cannot access ${ENV_DEVELOPER_PRIVKEY_PATH}: No such file or directory"
+            exit 1
+        fi
+    fi
+    echo "----ENCRYPTED SaaS(BK_ENV_FILE:$BK_ENV_FILE)-------------"
+fi
+
 if [ "$IS_MASTER" = "true" ]; then
     echo "------STARTING: Migrate Database------"
+    md5sum ${PYTHON_BIN_PATH}python
+    ${PYTHON_BIN_PATH}python --version
     ${PYTHON_BIN_PATH}python manage.py migrate --noinput
     if_fail_then_exit "$?" "------FAILURE: Migrate Database------"
     echo "------SUCCESS: Migrate Database------" || exit

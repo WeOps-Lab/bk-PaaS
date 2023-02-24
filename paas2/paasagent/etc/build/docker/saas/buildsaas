@@ -10,6 +10,7 @@ green_echo ()    { [ "$HASTTY" == 1 ] && echo -e "\033[032;1m$@\033[0m" || echo 
 bblue_echo ()    { [ "$HASTTY" == 1 ] && echo -e "\033[044;1m$@\033[0m" || echo "$@"; }
 
 get_lan_ip  () {
+   #
    ip addr | \
        awk -F'[ /]+' '/inet/{
                split($3, N, ".")
@@ -118,7 +119,6 @@ remove_app () {
 
     for id in ${can_ids[@]}; do
         [ $id == "$reserve" ] && continue
-        # ignore aufs error
         docker stop $id && docker rm -f $id >/dev/null
     done
 
@@ -148,7 +148,6 @@ mount_objects () {
     if [ ! -z "$BKAPP_ENABLE_SHARED_FS" ]; then
         MOUNT_OPTION+=" -v $CODE_PATH/$APP_CODE/USERRES:$CODE_CONTAINER_PATH/USERRES"
     fi
-
     return 0
 }
 
@@ -170,12 +169,14 @@ start_container () {
         $MOUNT_OPTION \
         --env-file $tmpenv \
         --env BK_PROXY=$BK_PROXY \
+        --env BK_ENCRYPTED=$encrypted \
+        --env BK_DEVELOPER_CODE=$developer_code \
+        --env BK_CRYPT_VERSION=$crypt_version \
         -m $MAX_MEM \
         -c $MAX_CPU_SHARES \
         -d $IMAGE_NAME sh ${BUILDER_CONTAINER_PATH}builder")
     assert "create app container done" "create app container failed.[JOB FAILURE]"
     rm -f $tmpenv
-
     log "mount opton:"
     log " - $CODE_PATH/$APP_CODE:$CODE_CONTAINER_PATH"
     log " - $APP_PATH:$APP_CONTAINER_PATH"
@@ -252,6 +253,7 @@ if [ ! -z "$INSTALL_PATH" ]; then
 else
     BK_HOME=${WORK_DIR%%/paas_agent*}
 fi
+CERT_PATH="$BK_HOME/cert"
 
 export PROJECT_HOME=${WORK_DIR%etc/*}
 export DOCKER_BIN_PATH=$PROJECT_HOME/bin
@@ -276,6 +278,7 @@ if [ "$HANDLE" == "OFF" ]; then
     remove_app $APP_CODE
     assert "remove app($APP_CODE) done. SUCCESS: Offline Job." "remove app($APP_CODE) failed.[JOB FAILURE]"
     rm -f $RUN_PATH/{supervisord,uwsgi}.{pid,sock}
+
     exit $?
 fi
 
@@ -321,8 +324,48 @@ if [ ! -z "$BKAPP_ENABLE_SHARED_FS" ]; then
 fi
 rm -rf $APP_CODE
 
-rsync -a $SaaS_PATH/$APP_CODE/src/ $CODE_PATH/$APP_CODE/
-assert "extract done" "extract failed.[JOB FAILURE]"
+# 加密与否(存在src文件夹则非加密)
+if [ -f $SaaS_PATH/$APP_CODE/src ]; then
+    # 加密的SaaS包 src 是一个文件，而不是目录，用runtool工具解密
+    encrypted=true
+
+    log "check saas developer_code and crypt_version"
+    # 兼容老版本 saas，抛弃错误输出。如果发行商证书与实际不一致，请检查此处。
+    developer_code=$( cat $SaaS_PATH/$APP_CODE/app.yml | /opt/py36/bin/python -c 'import yaml,sys; print(yaml.full_load(sys.stdin)["developer_code"])' 2>/dev/null )
+    crypt_version=$( cat $SaaS_PATH/$APP_CODE/app.yml | /opt/py36/bin/python -c 'import yaml,sys; print(yaml.full_load(sys.stdin)["crypt_version"])' 2>/dev/null )
+    log "    - developer_code: ${developer_code:-bkoffical}"
+    log "    - crypt_version: ${crypt_version:-2}"
+
+    log "extract src"
+    if [ "$crypt_version" == '3' ]; then
+        if [ -f $CERT_PATH/${developer_code}_priv.key ]; then
+            rsync -a $CERT_PATH/${developer_code}_priv.key $SaaS_PATH/$APP_CODE/conf/
+        else
+            echo "cannot access /$CERT_PATH/${developer_code}_priv.key: No such file or directory"
+            exit 1
+        fi
+        publisher_privkey="--publisher-privkey=${SaaS_PATH}/${APP_CODE}/conf/${developer_code}_priv.key"
+    fi
+    /usr/bin/runtool ${publisher_privkey} --pack-path=$SaaS_PATH/$APP_CODE/src \
+        --cert-path=$SaaS_PATH/$APP_CODE/cert \
+        --ee-cert-path="$CERT_PATH" \
+        --conf-path=$SaaS_PATH/$APP_CODE/conf \
+        --license-host="license.service.consul:8443"
+    rsync -a $SaaS_PATH/$APP_CODE/conf $CODE_PATH/$APP_CODE/
+    rsync -a $SaaS_PATH/$APP_CODE/eSrc/src/* $CODE_PATH/$APP_CODE/
+    assert "extract done" "extract failed.[JOB FAILURE]"
+    if [ ! -e "$CODE_PATH/$APP_CODE/conf/saas_priv.txt" ]; then
+        echo "no saas_priv.txt"
+        exit 1
+    fi
+elif [[ -d $SaaS_PATH/$APP_CODE/src ]]; then
+    encrypted=false
+    rsync -a $SaaS_PATH/$APP_CODE/src/ $CODE_PATH/$APP_CODE/
+    assert "extract done" "extract failed.[JOB FAILURE]"
+else
+    echo "$SaaS_PATH/$APP_CODE/src is not file or directory, exit"
+    exit 1
+fi
 
 # 部署时, 为App 共享目录建立软连接。
 if [ ! -z "$BKAPP_ENABLE_SHARED_FS" ]; then

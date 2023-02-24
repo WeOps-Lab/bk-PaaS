@@ -46,6 +46,8 @@ fi
 groupadd -g $APPS_GID apps
 useradd apps -u $APPS_UID -g $APPS_GID -b /home
 
+echo "apps soft nproc 102400" >> /etc/security/limits.d/20-nproc.conf
+
 # 切换到apps用户
 chown -R apps:apps ${APP_CONTAINER_PATH}
 su -m apps -c "/build/starter"

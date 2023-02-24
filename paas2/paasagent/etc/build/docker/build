@@ -10,6 +10,7 @@ green_echo ()    { [ "$HASTTY" == 1 ] && echo -e "\033[032;1m$@\033[0m" || echo 
 bblue_echo ()    { [ "$HASTTY" == 1 ] && echo -e "\033[044;1m$@\033[0m" || echo "$@"; }
 
 get_lan_ip  () {
+   #
    ip addr | \
        awk -F'[ /]+' '/inet/{
                split($3, N, ".")
@@ -118,8 +119,8 @@ remove_app () {
 
     for id in ${can_ids[@]}; do
         [ $id == "$reserve" ] && continue
-        # ignore aufs error
         docker stop $id && docker rm -f $id >/dev/null
+
     done
 
     return 0
@@ -148,7 +149,6 @@ mount_objects () {
     if [ ! -z "$BKAPP_ENABLE_SHARED_FS" ]; then
         MOUNT_OPTION+=" -v $CODE_PATH/$APP_CODE/USERRES:$CODE_CONTAINER_PATH/USERRES"
     fi
-
     return 0
 }
 
@@ -175,7 +175,6 @@ start_container () {
         -d $IMAGE_NAME sh ${BUILDER_CONTAINER_PATH}builder")
     assert "create app container done" "create app container failed.[JOB FAILURE]"
     rm -f $tmpenv
-
     log "mount opton:"
     log " - $CODE_PATH/$APP_CODE:$CODE_CONTAINER_PATH"
     log " - $APP_PATH:$APP_CONTAINER_PATH"
@@ -282,6 +281,7 @@ if [ "$HANDLE" == "OFF" ]; then
     remove_app $APP_CODE
     assert "remove app($APP_CODE) done. SUCCESS: Offline Job." "remove app($APP_CODE) failed.[JOB FAILURE]"
     rm -f $RUN_PATH/{supervisord,uwsgi}.{pid,sock}
+
     exit $?
 fi
 
@@ -317,7 +317,6 @@ mkdir -p $APP_PATH $CODE_PATH/$APP_CODE $CONF_PATH \
 # 拉取代码到临时目录下
 code_tempdir=`mktemp -d /tmp/tmpd.XXXXXX`
 cd $code_tempdir || fail "cd $code_tempdir failed"
-
 if [ "$VCS_TYPE" == "git" ]; then
     log "pull code to '$CODE_PATH/$APP_CODE' from git"
     git clone --quiet $VCS_PATH $APP_CODE >/dev/null

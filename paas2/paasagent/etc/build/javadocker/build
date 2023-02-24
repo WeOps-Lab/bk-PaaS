@@ -18,6 +18,7 @@ done
 
 MODULE_HOME=${BASH_SOURCE%/paas_agent*}
 DOCKER_BIN_PATH=$MODULE_HOME/paas_agent/bin
+# DOCKER_BIN_PATH="/data/service/docker/bin"
 
 function if_fail_then_exit() {
     if [ "$1" != "0" ]; then
