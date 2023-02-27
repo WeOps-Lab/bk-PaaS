@@ -15,7 +15,7 @@ settings:
   AGENT_LOG_PATH: __BK_HOME__/logs/paasagent/agent.log
   TEMPLATE_PATH: 'paas_agent/etc/templates'
   BUILD_PATH: 'paas_agent/etc/build'
-  EXECUTE_TIME_LIMIT: 300
+  EXECUTE_TIME_LIMIT: 3000
   PYTHON_PIP: '__BK_PAASAGENT_PYPI_URL__'
 
 java_settings:

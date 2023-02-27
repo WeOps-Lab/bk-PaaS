@@ -50,6 +50,8 @@ BK_COOKIE_AGE = 60 * 60 * 24
 # cookie访问域
 BK_COOKIE_DOMAIN = '.__BK_DOMAIN__'
 
+EVENT_STATE_EXPIRE_SECONDS = 3600
+
 # 控制台地址
 ENGINE_HOST = "http://__LAN_IP__:8000"
 # 登陆服务地址
