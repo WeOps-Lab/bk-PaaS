@@ -2,14 +2,15 @@ FROM golang as builder
 RUN go env -w GOPROXY=https://goproxy.cn
 
 WORKDIR /apps
-ADD ./paas2 .
-
-WORKDIR /apps/paasagent
+COPY . .
 RUN make build
 
 FROM centos:7
-COPY --from=builder /apps/paasagent/bin/paas_agent /app/paas_agent/paas_agent/bin/
-COPY --from=builder /apps/paasagent/etc /app/paas_agent/paas_agent/etc
-COPY --from=builder /apps/paasagent/support-files /app/paas_agent/support-files
-
-WORKDIR /app/paas_agent
+WORKDIR /opt
+COPY --from=builder /apps/bin/paas_agent /opt/paas_agent/paas_agent/bin/
+COPY --from=builder /apps/etc /opt/paas_agent/paas_agent/etc
+COPY --from=builder /apps/support-files /opt/paas_agent/support-files
+COPY --from=builder /apps/VERSION /opt/paas_agent/VERSION
+COPY --from=builder /apps/README.md /opt/paas_agent/README.md
+COPY --from=builder /apps/projects.yaml /opt/paas_agent/projects.yaml
+WORKDIR /opt/paas_agent

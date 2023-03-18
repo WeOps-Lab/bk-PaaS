@@ -49,3 +49,15 @@ paas:
 	$(VENV_PATH)/bin/pip3 download -r $(PAAS_RELEASE_PATH)/login/requirements.txt --dest $(PAAS_RELEASE_PATH)/support-files/pkgs
 
 	rm -Rf $(VENV_PATH)
+
+release-docker:
+	cd ./paas2/appengine &&\
+	docker build -t appengine . &&\
+	cd ../esb &&\
+	docker build -t esb . &&\
+	cd ../login &&\
+	docker build -t login . &&\
+	cd ../paas &&\
+	docker build -t paas . &&\
+	cd ../paasagent  &&\
+	docker build -t paasagent .
