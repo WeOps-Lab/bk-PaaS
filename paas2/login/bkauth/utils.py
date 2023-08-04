@@ -30,7 +30,7 @@ BK_COOKIE_AGE = settings.BK_COOKIE_AGE
 BK_INACTIVE_COOKIE_AGE = settings.BK_INACTIVE_COOKIE_AGE
 
 
-def get_bk_token(username):
+def get_bk_token(username, create_token=True):
     """
     生成用户的登录态
     """
@@ -42,17 +42,18 @@ def get_bk_token(username):
     while not bk_token and retry_count < 5:
         now_time = int(time.time())
         expire_time = now_time + BK_COOKIE_AGE
-        # inactive_expire_time = now_time + BK_INACTIVE_COOKIE_AGE
         plain_token = "%s|%s|%s" % (expire_time, username, salt())
         bk_token = encrypt(plain_token)
-        # try:
-        #     # BkToken.objects.create(token=bk_token)
-        #     BkToken.objects.create(token=bk_token, inactive_expire_time=inactive_expire_time)
-        # except Exception:
-        #     # logger.exception(u"登录票据保存失败")
-        #     logger.exception("Login ticket failed to be saved during ticket generation")
-        #     # 循环结束前将bk_token置空后重新生成
-        #     bk_token = "" if retry_count < 4 else bk_token
+        if create_token:
+            inactive_expire_time = now_time + BK_INACTIVE_COOKIE_AGE
+            try:
+                # BkToken.objects.create(token=bk_token)
+                BkToken.objects.create(token=bk_token, inactive_expire_time=inactive_expire_time)
+            except Exception:
+                # logger.exception(u"登录票据保存失败")
+                logger.exception("Login ticket failed to be saved during ticket generation")
+                # 循环结束前将bk_token置空后重新生成
+                bk_token = "" if retry_count < 4 else bk_token
         retry_count += 1
     return bk_token, datetime.datetime.fromtimestamp(expire_time, timezone.get_current_timezone())
 
