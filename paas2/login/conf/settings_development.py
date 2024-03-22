@@ -28,20 +28,20 @@ DATABASES = {
         "ENGINE": "django.db.backends.mysql",  # 默认用mysql
         "NAME": "open_paas",
         "USER": "root",
-        "PASSWORD": "",
+        "PASSWORD": "123456",
         "HOST": "127.0.0.1",
         "PORT": "3306",
     }
 }
 
 # domain
-PAAS_DOMAIN = "dev.paas.open.bking.com:8000"
+PAAS_DOMAIN = "paasdev.weops.com:8001"
 # inner domain, use consul domain,  for api
-PAAS_INNER_DOMAIN = ""
+PAAS_INNER_DOMAIN = "paas.weops.com"
 HTTP_SCHEMA = "http"
 
 # cookie访问域
-BK_COOKIE_DOMAIN = ".bking.com"
+BK_COOKIE_DOMAIN = ".weops.com"
 
 # 初始化用户名、密码
 USERNAME = "admin"
@@ -51,7 +51,7 @@ PASSWORD = "admin"
 BK_USERMGR_HOST = ""
 
 # ESB Token
-ESB_TOKEN = ""
+ESB_TOKEN = "39583088-3936-4176-949d-9aee3caeaa40"
 
 CERTIFICATE_DIR = "/"
 CERTIFICATE_SERVER_DOMAIN = "127.0.0.1"

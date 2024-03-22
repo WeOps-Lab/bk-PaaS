@@ -13,14 +13,11 @@ specific language governing permissions and limitations under the License.
 from esb.utils import SmartHost
 from .tools import get_base64_icon
 
-
 SYSTEM_NAME = "CMSI"
-
 
 host = SmartHost(
     host_prod="need_to_be_updated",
 )
-
 
 # 通过 SMTP 发送邮件的配置
 smtp_host = ""
@@ -30,7 +27,6 @@ smtp_pwd = ""
 smtp_usessl = False
 smtp_usetls = False
 mail_sender = "blueking@bking.com"
-
 
 # 通过第三方接口发送邮件的配置
 dest_url = ""  # 邮件第三方接口完整路径
@@ -87,3 +83,15 @@ msg_type = [
 ]
 
 msg_type_map = {"weixin": "send_weixin", "mail": "send_mail", "sms": "send_sms", "voice": "send_voice_msg"}
+
+msg_type.append(
+    {
+        "type": "kafka",
+        "label": "kafka",
+        "label_en": "kafka",
+        "active_icon": get_base64_icon("icons_v2/kafka_active.ico"),
+        "unactive_icon": get_base64_icon("icons_v2/kafka_unactive.ico"),
+    }
+)
+
+msg_type_map["kafka"] = "send_kafka"

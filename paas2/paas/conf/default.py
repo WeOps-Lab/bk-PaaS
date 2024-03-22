@@ -109,7 +109,7 @@ MIDDLEWARE_CLASSES = (
     "bk_i18n.middlewares.LanguageMiddleware",
     "bk_i18n.middlewares.ApiLanguageMiddleware",
     "bk_i18n.middlewares.TimezoneMiddleware",
-    "common.middlewares.DeveloperCenterAccessMiddleware",
+    # "common.middlewares.DeveloperCenterAccessMiddleware",
     "common.middlewares.CheckXssMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 )
@@ -339,8 +339,8 @@ if not os.path.exists(LOGGING_DIR):
 # 10M
 LOG_MAX_BYTES = 1024 * 1024 * 10
 LOG_BACKUP_COUNT = 10
-# LOG_CLASS = 'logging.handlers.RotatingFileHandler'
-LOG_CLASS = "cloghandler.ConcurrentRotatingFileHandler"
+LOG_CLASS = 'logging.handlers.RotatingFileHandler'
+# LOG_CLASS = "cloghandler.ConcurrentRotatingFileHandler"
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

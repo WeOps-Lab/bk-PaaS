@@ -14,7 +14,7 @@ specific language governing permissions and limitations under the License.
 from gevent import monkey
 
 # patches stdlib (including socket and ssl modules) to cooperate with other greenlets
-monkey.patch_all()
+# monkey.patch_all()
 # FOR OPENSOURCE: REMOVE END
 
 import os  # noqa

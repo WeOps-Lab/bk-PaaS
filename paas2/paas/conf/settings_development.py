@@ -27,38 +27,35 @@ DATABASES = {
         "ENGINE": "django.db.backends.mysql",  # 默认用mysql
         "NAME": "open_paas",
         "USER": "root",
-        "PASSWORD": "",
-        "HOST": "127.0.0.1",
-        "PORT": "3306",
-    },
-    "bksuite": {
-        "ENGINE": "django.db.backends.mysql",  # 默认用mysql
-        "NAME": "bksuite_common",
-        "USER": "root",
-        "PASSWORD": "",
+        "PASSWORD": "123456",
         "HOST": "127.0.0.1",
         "PORT": "3306",
     },
 }
 
 # domain
-PAAS_DOMAIN = "dev.paas.open.bking.com:8000"
+PAAS_DOMAIN = "paasdev.weops.com:8001"
 # inner domain, use consul domain,  for api
-PAAS_INNER_DOMAIN = ""
+PAAS_INNER_DOMAIN = "paasdev.weops.com"
 HTTP_SCHEMA = "http"
 
+
+
+# 初始化用户名、密码
+USERNAME = "admin"
+PASSWORD = "WeOps2023"
 
 # cookie 名称
 BK_COOKIE_NAME = "bk_token"
 # cookie有效期
 BK_COOKIE_AGE = 60 * 60 * 24
 # cookie访问域
-BK_COOKIE_DOMAIN = ".bking.com"
+BK_COOKIE_DOMAIN = ".weops.com"
 
 # 控制台地址
 ENGINE_HOST = "http://127.0.0.1:8000"
 # 登陆服务地址
-LOGIN_HOST = "http://paas.open.bking.com"
+LOGIN_HOST = "http://paasdev.weops.com"
 
 
 # host for cc
@@ -72,8 +69,8 @@ HOST_DATA = "__DATAAPI_HOST__:__DATAAPI_PORT__"
 # host for fta
 HOST_FTA = "__FTA_HOST__:__FTA_API_PORT__"
 # host iam, should use the inner ip and port
-HOST_IAM = "__IAM_HOST__:__IAM_PORT__"
-HOST_IAM_NEW = "__BKIAM_HOST__:__BKIAM_PORT__"
+HOST_IAM = "http://paas.weops.com/o/bk_iam/"
+HOST_IAM_NEW = "http://paas.weops.com/o/bk_iam/"
 
 # SECRET_KEY = ''
 
@@ -91,7 +88,7 @@ APP_DEPLOY_ENVS = {
 }
 
 # 日志查询Elasticsearch服务器
-ELASTICSEARCH_URLS = "log.o.bking.com:80"
+ELASTICSEARCH_URLS = "log.o.weops.com:80"
 ELASTICSEARCH_HOSTS = ELASTICSEARCH_URLS.split(";")
 
 
@@ -105,4 +102,4 @@ ALARM_REDIS_CHANNEL = "paas_app_alarm_config"
 
 
 # 登录域名
-LOGIN_DOMAIN = "paas.open.bking.com"
+LOGIN_DOMAIN = "paas.weops.com"

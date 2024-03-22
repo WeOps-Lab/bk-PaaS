@@ -77,6 +77,7 @@ config = {
                     "/v2/cmsi/send_weixin/": "/cmsi/send_weixin/",
                     "/v2/cmsi/get_msg_type/": "/cmsi/get_msg_type/",
                     "/v2/cmsi/send_msg/": "/cmsi/send_msg/",
+                    "/v2/cmsi/send_kafka/": "/cmsi/send_kafka/",
                 },
                 "preset_channels": [
                     # CC v2
@@ -394,6 +395,18 @@ config = {
                                 ("wx_app_id", ""),
                                 ("wx_secret", ""),
                                 ("wx_template_id", "yrxKwt3OR4BGvuZzwiASaSm_GfOtxwak3mMfh5Ijiaw"),
+                            ],
+                        },
+                    ),
+                    (
+                        "/cmsi/send_kafka/",
+                        {
+                            "comp_codename": "generic.cmsi.send_kafka",
+                            "comp_conf_to_db": [
+                                ("weixin", True),
+                                ("mail", True),
+                                ("sms", True),
+                                ("voice", True),
                             ],
                         },
                     ),
