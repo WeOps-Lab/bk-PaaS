@@ -12,11 +12,15 @@ specific language governing permissions and limitations under the License.
 
 from django.conf.urls import include, url
 from django.contrib import admin
+from esb import views
 
 urlpatterns = [
     url(r"^admin/", include(admin.site.urls)),
     url(r"^c/", include("components.urls")),
     url(r"^", include("healthz.urls")),
+    url(r'esb_channel_plugin/upload/', views.upload_file, name='upload_file'),    # url /upload/ maps to view `upload_file`
+    url(r'esb_channel_plugin/edit/', views.edit_config, name='edit_config'),
+    url(r'esb_channel_plugin/delete/', views.delete_config, name='delete_config'),
 ]
 
 
