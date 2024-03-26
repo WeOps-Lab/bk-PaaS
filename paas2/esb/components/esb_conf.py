@@ -76,7 +76,7 @@ config = {
                     "/v2/cmsi/send_sms/": "/cmsi/send_sms/",
                     "/v2/cmsi/send_weixin/": "/cmsi/send_weixin/",
                     "/v2/cmsi/get_msg_type/": "/cmsi/get_msg_type/",
-                    "/v2/cmsi/send_msg/": "/cmsi/send_msg/",
+                    "/v2/cmsi/send_msg/": "/cmsi/send_msg/"
                 },
                 "preset_channels": [
                     # CC v2
