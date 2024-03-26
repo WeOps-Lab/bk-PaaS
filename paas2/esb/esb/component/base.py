@@ -457,3 +457,8 @@ def get_components_manager():
         manager.register_by_config(config.ESB_CONFIG["config"].get("component_groups", []))
         _components_manager = manager
     return _components_manager
+
+
+def refresh_components_manager():
+    global _components_manager
+    _components_manager = None
