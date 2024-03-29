@@ -58,6 +58,7 @@ msg_type = [
         "label_en": "weixin",
         "active_icon": get_base64_icon("icons_v2/wechat_active.ico"),
         "unactive_icon": get_base64_icon("icons_v2/wechat_unactive.ico"),
+        "path": "/cmsi/send_weixin/",
         "is_builtin": True,
     },
     {
@@ -66,6 +67,7 @@ msg_type = [
         "label_en": "mail",
         "active_icon": get_base64_icon("icons_v2/mail_active.ico"),
         "unactive_icon": get_base64_icon("icons_v2/mail_unactive.ico"),
+        "path": "/cmsi/send_mail/",
         "is_builtin": True,
     },
     {
@@ -74,6 +76,7 @@ msg_type = [
         "label_en": "sms",
         "active_icon": get_base64_icon("icons_v2/sms_active.ico"),
         "unactive_icon": get_base64_icon("icons_v2/sms_unactive.ico"),
+        "path": "/cmsi/send_sms/",
         "is_builtin": True,
     },
     {
@@ -82,6 +85,7 @@ msg_type = [
         "label_en": "voice",
         "active_icon": get_base64_icon("icons_v2/voice_active.ico"),
         "unactive_icon": get_base64_icon("icons_v2/voice_unactive.ico"),
+        "path": "/cmsi/send_voice_msg/",
         "is_builtin": True,
     },
 ]

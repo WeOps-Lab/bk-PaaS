@@ -36,6 +36,8 @@ class GetMsgType(Component, SetupConfMixin):
                     "icon": mt["active_icon"] if is_active else mt["unactive_icon"],
                     "label": mt["label_en"] if bk_language == "en" else mt["label"],
                     "is_active": is_active,
+                    **({"path": mt["path"]} if "path" in mt else {}),
+                    **({"is_builtin": mt["is_builtin"]} if "is_builtin" in mt else ''),
                 }
             )
 
