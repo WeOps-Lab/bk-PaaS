@@ -1,3 +1,4 @@
+import glob
 import json
 import os
 import shutil
@@ -167,11 +168,11 @@ class Esb_channel_plugin(object):
                 # 更新对象属性值
                 self.update_properties_from_json(channel_config_data)
 
-                # 检查对应的 Python 文件是否存在
-                py_file_path = os.path.join(plugin_dir, f"{self.cmp_name}.py")
-                if not os.path.exists(py_file_path):
-                    # 如果对应的 Python 文件不存在，返回相应的错误信息
-                    return JsonResponse({"success": False, "message": f"{self.cmp_name}.py file not found"})
+                # 检查指定目录下是否存在任何 .py 文件
+                py_files = glob.glob(os.path.join(plugin_dir, "*.py"))
+                if not py_files:
+                    # 如果指定目录下不存在任何 .py 文件，返回相应的错误信息
+                    return JsonResponse({"success": False, "message": "No .py files found"})
 
                 # 预检查
                 return self.pre_check()
