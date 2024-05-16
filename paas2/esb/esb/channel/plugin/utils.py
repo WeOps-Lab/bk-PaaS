@@ -22,7 +22,7 @@ class Esb_channel_plugin(object):
         self.request = request
         self.config_data = None
         self.name = None
-        self.IAM_channel_type = request.POST.get('code', '')
+        self.im_channel_type = request.POST.get('code', '')
         self.esb_conf_config = config
         self.cmp_name = None
         self.channel_path = None
@@ -31,6 +31,8 @@ class Esb_channel_plugin(object):
         self.channel_cmp_sys_id = ComponentSystem.objects.get(name=msg_type_config.SYSTEM_NAME).id
         self.channel_type = 1
         self.update = False
+        self.channels_in_database = ESBChannel.objects.filter_channels(system_ids=[self.channel_cmp_sys_id],
+                                                                       is_hidden=None, is_active=None)
 
     # 检查配置参数
     def pre_check(self):
@@ -44,22 +46,22 @@ class Esb_channel_plugin(object):
             return JsonResponse({"success": False,
                                  "message": f"Config JSON file does not contain {' and '.join(missing_params)}"})
 
-        existing_item = next((item for item in msg_type_config.msg_type
-                              if item.get('type') == self.IAM_channel_type), None)
-        if existing_item:
-            # 检查是否存在不同的path和cmp_name
-            if (existing_item.get('path') != self.channel_path and
-                    existing_item.get('cmp_name') != self.cmp_name):
-                return JsonResponse({"success": False,
-                                     "message": f"Cannot modify existing type: {self.IAM_channel_type} with different path and cmp_name together"})
+        for channel in self.channels_in_database:
+            if channel.extra_info:
+                if self.im_channel_type == json.loads(channel.extra_info).get("type", ""):
+                    # 检查是否存在不同的path和cmp_name
+                    if (channel.path != self.channel_path and
+                            channel.component_name != self.cmp_name):
+                        return JsonResponse({"success": False,
+                                             "message": f"Cannot modify existing type: {self.im_channel_type} with different path and cmp_name together"})
 
     def update_mapping(self):
         item_data = {
             "name": self.name,
-            "type": self.IAM_channel_type,
+            "type": self.im_channel_type,
             "cmp_name": self.cmp_name,
-            "label": self.IAM_channel_type,
-            "label_en": self.IAM_channel_type,
+            "label": self.im_channel_type,
+            "label_en": self.im_channel_type,
             "active_icon": get_base64_icon("icons_v2/default_active.ico"),
             "unactive_icon": get_base64_icon("icons_v2/default_unactive.ico"),
             "is_active": self.is_active,
@@ -72,7 +74,7 @@ class Esb_channel_plugin(object):
         if channel:
             # 判断是否需要删除目录
             extra_info = json.loads(channel.extra_info)
-            if extra_info.get('type') != self.IAM_channel_type:
+            if extra_info.get('type') != self.im_channel_type:
                 old_plugin_dir = os.path.join(BASE_DIR, 'components', 'generic', 'templates', 'cmsi', 'plugins',
                                               str(extra_info.get('type')))
                 if os.path.exists(old_plugin_dir):
@@ -84,21 +86,6 @@ class Esb_channel_plugin(object):
 
         else:
             return JsonResponse({"success": False, "message": "Channel object does not exist"})
-
-        # 删除mapping信息
-
-    def delete_mapping(self):
-        # 检查要删除的类型是否存在于 msg_type_map 中
-        if self.IAM_channel_type in msg_type_config.msg_type_map:
-            # 删除映射
-            del msg_type_config.msg_type_map[self.IAM_channel_type]
-
-        # 检查要删除的类型是否存在于 msg_type 中
-        for item in msg_type_config.msg_type:
-            if item.get('type') == self.IAM_channel_type:
-                # 删除对应的消息类型
-                msg_type_config.msg_type.remove(item)
-                break  # 找到后跳出循环
 
     # 创建通道并更新mapping
     def create_esb_plugin_channel(self):
@@ -189,90 +176,74 @@ class Esb_channel_plugin(object):
         self.channel_path = f"/cmsi{config_data['path']}" if 'path' in config_data else None  # path 需以/开头
         self.is_active = config_data.get('is_active', True)
 
-    def get_cmsi_plugin_channel(self):
-        return ESBChannel.objects.filter_channels(system_ids=self.channel_cmp_sys_id, is_hidden=None, is_active=None)
-
 
 class Esb_edit_channel(Esb_channel_plugin):
     def __init__(self, request):
         super().__init__(request)
         self.body_data = json.loads(request.body.decode('utf-8'))
-        self.IAM_channel_type = self.body_data.get('code', '')
+        self.im_channel_type = self.body_data.get('code', '')
         self.config_data = self.body_data.get('config', '')
         self.is_active = self.config_data.get('is_active') if 'is_active' in self.config_data else True
 
     # 编辑消息通道参数
     def edit_channel(self):
-        existing_item = next((item for item in msg_type_config.msg_type
-                              if (item.get('type') == self.IAM_channel_type)), None)
-        if not existing_item:
-            return JsonResponse({"success": False,
-                                 "message": f"Can not find channel in map: {self.IAM_channel_type} "
-                                            f"Existing channels config in map: {msg_type_config.msg_type_map}"})
+        for channel in self.channels_in_database:
+            if channel.extra_info:
+                if self.im_channel_type == json.loads(channel.extra_info).get("type", ""):
+                    command = Command()
+                    command.force = None
+                    channel.is_active = self.is_active
+                    self.cmp_name = channel.component_name
 
-        self.channel_path = existing_item.get('path')
+                    # 只更新存在于 comp_conf 数据中的键
+                    # 更新原始配置中已存在的键值对
+                    origin_comp_conf = json.loads(channel.comp_conf)
+                    input_comp_conf = self.config_data.get("comp_conf_to_db", [])
 
-        command = Command()
-        try:
-            esb_channel = ESBChannel.objects.get(Q(path=self.channel_path))
-            command.force = None
-            esb_channel.is_active = self.is_active
-            self.cmp_name = esb_channel.component_name
+                    # 创建一个字典，以 origin_comp_conf 中的键作为键，对应的值为 True
+                    existing_keys = {item[0]: True for item in origin_comp_conf}
 
-            # 只更新存在于 comp_conf 数据中的键
-            comp_conf_db = json.loads(esb_channel.comp_conf)
+                    # 遍历 input_comp_conf 中的每个键值对，如果键存在于 existing_keys 中，则更新原始配置的值
+                    for key, value in input_comp_conf:
+                        if key in existing_keys:
+                            for entry in origin_comp_conf:
+                                if entry[0] == key:
+                                    entry[1] = value  # 更新值
 
-            updated_comp_conf = []
-            for item in self.config_data.get("comp_conf_to_db", []):
-                key = item[0]
-                value = item[1]
-                for entry in comp_conf_db:
-                    if key in entry:
-                        updated_comp_conf.append([key, value])
+                    # 不允许修改extra_info
+                    self.config_data.setdefault({"is_confapi": True, "label_en": f"{self.cmp_name}",
+                                                 "suggest_method": "POST"})
 
-            # Update config_data keys if necessary
-            self.config_data.setdefault('extra_info',
-                                        {"is_confapi": True, "label_en": f"{self.cmp_name}", "suggest_method": "POST"})
+                    self.config_data.update({
+                        "path": self.channel_path,
+                        "comp_conf_to_db": origin_comp_conf,
+                        "method": self.channel_method
+                    })
 
-            self.config_data.update({
-                "path": self.channel_path,
-                "comp_conf_to_db": updated_comp_conf,
-                "method": self.channel_method
-            })
+                    command.update_channel_by_config(channel, self.config_data, [], [])
+                    refresh_components_manager()
 
-            command.update_channel_by_config(esb_channel, self.config_data, [], [])
-        except ESBChannel.DoesNotExist:
-            return JsonResponse({"success": False,
-                                 "message": f"Can not find channel in database: {self.IAM_channel_type}"})
+                    return JsonResponse({"success": True,
+                                         "message": "edit successfully"})
 
-        # 数据库操作成功才更新mapping
-        self.update_mapping()
-
-        refresh_components_manager()
+        return JsonResponse({"success": False,
+                             "message": "Can not find channel in database"})
 
     def delete_channel(self):
-        existing_item = next((item for item in msg_type_config.msg_type
-                              if (item.get('type') == self.IAM_channel_type)), None)
+        for channel in self.channels_in_database:
+            if channel.extra_info:
+                if self.im_channel_type == json.loads(channel.extra_info).get("type", ""):
+                    channel.delete()
 
-        if not existing_item:
-            return JsonResponse({"success": False,
-                                 "message": f"Can not find channel in mapping: {self.IAM_channel_type}"})
-        else:
-            self.channel_path = existing_item.get('path')
+                    # 删除插件包目录
+                    plugin_dir = os.path.join(BASE_DIR, 'components', 'generic', 'templates', 'cmsi', 'plugins',
+                                              str(json.loads(channel.extra_info).get('type')))
+                    if os.path.exists(plugin_dir):
+                        shutil.rmtree(plugin_dir)
 
-            try:
-                esb_channel = ESBChannel.objects.get(Q(path=self.channel_path))
-                esb_channel.delete()
-            except ESBChannel.DoesNotExist:
-                return JsonResponse({"success": False,
-                                     "message": f"Can not find channel in database: {self.IAM_channel_type}"})
+                    refresh_components_manager()
+                    return JsonResponse({"success": True,
+                                         "message": "deleted successfully"})
 
-            self.delete_mapping()
-
-            # 删除插件包目录
-            plugin_dir = os.path.join(BASE_DIR, 'components', 'generic', 'templates', 'cmsi', 'plugins',
-                                      str(existing_item.get('type')))
-            if os.path.exists(plugin_dir):
-                shutil.rmtree(plugin_dir)
-
-            refresh_components_manager()
+        return JsonResponse({"success": False,
+                             "message": f"Can not find channel in database, channel type is: {self.im_channel_type}"})
