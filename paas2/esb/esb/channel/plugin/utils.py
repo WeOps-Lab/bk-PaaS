@@ -21,6 +21,7 @@ class Esb_channel_plugin(object):
     def __init__(self, request):
         self.request = request
         self.config_data = None
+        self.name = None
         self.IAM_channel_type = request.POST.get('code', '')
         self.esb_conf_config = config
         self.cmp_name = None
@@ -54,6 +55,7 @@ class Esb_channel_plugin(object):
 
     def update_mapping(self):
         item_data = {
+            "name": self.name,
             "type": self.IAM_channel_type,
             "cmp_name": self.cmp_name,
             "label": self.IAM_channel_type,
@@ -62,6 +64,7 @@ class Esb_channel_plugin(object):
             "unactive_icon": get_base64_icon("icons_v2/default_unactive.ico"),
             "is_active": self.is_active,
             "path": self.channel_path,
+            "method": self.channel_method,
             "is_builtin": False,
         }
 
@@ -179,10 +182,15 @@ class Esb_channel_plugin(object):
 
     # 从 JSON 数据中更新对象属性
     def update_properties_from_json(self, config_data):
+        self.name = config_data.get('name', '')
         self.config_data = config_data
         self.cmp_name = config_data.get('component_name', '')
         self.channel_path = f"/cmsi{config_data['path']}" if 'path' in config_data else None  # path 需以/开头
         self.is_active = config_data.get('is_active', True)
+
+    def get_cmsi_plugin_channel(self):
+        return ESBChannel.objects.filter_channels(system_ids=7, is_hidden=None, is_active=None)
+
 
 
 class Esb_edit_channel(Esb_channel_plugin):
@@ -268,3 +276,5 @@ class Esb_edit_channel(Esb_channel_plugin):
                 shutil.rmtree(plugin_dir)
 
             refresh_components_manager()
+
+

@@ -32,11 +32,13 @@ class GetMsgType(Component, SetupConfMixin):
             is_active = mt.get("is_active", str_bool(getattr(self, mt["type"], False)))
             msg_type.append(
                 {
+                    **({"name": mt["name"]} if "name" in mt else {}),
                     "type": mt["type"],
                     "icon": mt["active_icon"] if is_active else mt["unactive_icon"],
                     "label": mt["label_en"] if bk_language == "en" else mt["label"],
                     "is_active": is_active,
                     **({"path": mt["path"]} if "path" in mt else {}),
+                    **({"method": mt["method"]} if "method" in mt else {}),
                     **({"is_builtin": mt["is_builtin"]} if "is_builtin" in mt else ''),
                 }
             )
