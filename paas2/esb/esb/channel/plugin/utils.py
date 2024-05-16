@@ -68,24 +68,25 @@ class Esb_channel_plugin(object):
             "is_builtin": False,
         }
 
-        existing_item = next((item for item in msg_type_config.msg_type
-                              if (item.get('path') == self.channel_path or
-                                  item.get('cmp_name') == self.cmp_name)), None)
-
-        if existing_item:
+        channel = ESBChannel.objects.get(Q(path=self.channel_path) | Q(component_name=self.cmp_name))
+        if channel:
             # 判断是否需要删除目录
-            if existing_item.get('type') != self.IAM_channel_type:
+            extra_info = json.loads(channel.extra_info)
+            if extra_info.get('type') != self.IAM_channel_type:
                 old_plugin_dir = os.path.join(BASE_DIR, 'components', 'generic', 'templates', 'cmsi', 'plugins',
-                                              str(existing_item.get('type')))
+                                              str(extra_info.get('type')))
                 if os.path.exists(old_plugin_dir):
                     shutil.rmtree(old_plugin_dir)
-            existing_item.update(item_data)
+            extra_info.update(item_data)
+            # 将更新后的列表转换回字符串并保存回 channel.extra_info
+            channel.extra_info = json.dumps(extra_info)
+            channel.save()  # 保存更新后的 channel 对象到数据库
+
         else:
-            msg_type_config.msg_type.append(item_data)
+            return JsonResponse({"success": False, "message": "Channel object does not exist"})
 
-        msg_type_config.msg_type_map[self.IAM_channel_type] = self.cmp_name
+        # 删除mapping信息
 
-    # 删除mapping信息
     def delete_mapping(self):
         # 检查要删除的类型是否存在于 msg_type_map 中
         if self.IAM_channel_type in msg_type_config.msg_type_map:
@@ -189,8 +190,7 @@ class Esb_channel_plugin(object):
         self.is_active = config_data.get('is_active', True)
 
     def get_cmsi_plugin_channel(self):
-        return ESBChannel.objects.filter_channels(system_ids=7, is_hidden=None, is_active=None)
-
+        return ESBChannel.objects.filter_channels(system_ids=self.channel_cmp_sys_id, is_hidden=None, is_active=None)
 
 
 class Esb_edit_channel(Esb_channel_plugin):
@@ -276,5 +276,3 @@ class Esb_edit_channel(Esb_channel_plugin):
                 shutil.rmtree(plugin_dir)
 
             refresh_components_manager()
-
-
