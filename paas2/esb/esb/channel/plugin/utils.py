@@ -91,7 +91,7 @@ class Esb_channel_plugin(object):
     def create_esb_plugin_channel(self):
         # Update config_data keys if necessary
         self.config_data.setdefault('extra_info',
-                                    {"is_confapi": True, "label_en": f"{self.cmp_name}", "suggest_method": "POST"})
+                                    {"is_confapi": True, "label_en": f"{self.cmp_name}", "suggest_method": self.channel_method})
 
         default_update_fields = ["name", "component_codename", "component_name", "method", "is_hidden"]
         force_update_fields = ["component_system_id", "type", "timeout_time"]
@@ -211,8 +211,8 @@ class Esb_edit_channel(Esb_channel_plugin):
                                     entry[1] = value  # 更新值
 
                     # 不允许修改extra_info
-                    self.config_data.setdefault({"is_confapi": True, "label_en": f"{self.cmp_name}",
-                                                 "suggest_method": "POST"})
+                    self.config_data.setdefault("extra_info", {"is_confapi": True, "label_en": f"{self.cmp_name}",
+                                                 "suggest_method": self.channel_method})
 
                     self.config_data.update({
                         "path": self.channel_path,
@@ -221,6 +221,10 @@ class Esb_edit_channel(Esb_channel_plugin):
                     })
 
                     command.update_channel_by_config(channel, self.config_data, [], [])
+
+                    # 数据库操作成功才更新mapping
+                    self.update_mapping()
+
                     refresh_components_manager()
 
                     return JsonResponse({"success": True,
