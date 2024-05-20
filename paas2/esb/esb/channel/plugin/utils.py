@@ -26,7 +26,7 @@ class Esb_channel_plugin(object):
         self.esb_conf_config = config
         self.cmp_name = None
         self.channel_path = None
-        self.is_active = True
+        self.is_active = False
         self.channel_method = 'POST'
         self.channel_cmp_sys_id = ComponentSystem.objects.get(name=msg_type_config.SYSTEM_NAME).id
         self.channel_type = 1
