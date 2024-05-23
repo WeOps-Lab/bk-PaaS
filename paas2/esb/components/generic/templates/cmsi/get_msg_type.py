@@ -63,7 +63,7 @@ class GetMsgType(Component, SetupConfMixin):
                                 "name": channel.name,
                                 "type": mapping.get("type", ""),
                                 "icon": get_base64_icon("icons_v2/default_active.ico") if channel.is_active == 1 else get_base64_icon("icons_v2/default_unactive.ico"),
-                                "label": mapping.get("label_en", mapping.get("type", "")) if bk_language == "en" else mapping.get["label"],
+                                "label": mapping.get("label_en", mapping.get("type", "")) if bk_language == "en" else mapping.get("label", ""),
                                 "is_active": "true" if channel.is_active == 1 else "false",
                                 "path": channel.path,
                                 "method":  mapping.get("method", "POST"),
