@@ -9,7 +9,9 @@ Unless required by applicable law or agreed to in writing, software distributed 
 an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
 """
-
+import importlib
+import re
+import sys
 from builtins import object
 import os
 import copy
@@ -352,6 +354,7 @@ class ComponentsManager(object):
     ):
         self.name_component_map = {}
         self.path_configs = {}
+        self.plugin_subpath_pattern = re.compile(r'/cmsi/plugins')
 
     def __str__(self):
         return "<ComponentsManager: path_configs=%s>" % self.path_configs
@@ -402,8 +405,13 @@ class ComponentsManager(object):
             for filename in files:
                 filename = os.path.join(current_folder, filename)
                 if self.should_register(filename):
+                    module_name = fpath_to_module(filename)
                     try:
-                        module = import_module(fpath_to_module(filename))
+                        # 尝试重新加载插件目录模块
+                        if self.plugin_subpath_pattern.search(current_folder) and module_name in sys.modules:
+                            module = importlib.reload(sys.modules[module_name])
+                        else:
+                            module = import_module(module_name)
                         self.register_by_module(module, config=config)
                     except Exception:
                         logger.exception(
