@@ -90,11 +90,15 @@ class Esb_channel_plugin(object):
     # 创建通道并更新mapping
     def create_esb_plugin_channel(self):
         # Update config_data keys if necessary
-        self.config_data.setdefault('extra_info',
-                                    {"is_confapi": True, "label_en": f"{self.cmp_name}", "suggest_method": self.channel_method})
+        self.config_data.setdefault('extra_info', {
+            "is_confapi": True,
+            "label_en": f"{self.cmp_name}",
+            "suggest_method": self.channel_method
+        })
 
         default_update_fields = ["name", "component_codename", "component_name", "method", "is_hidden"]
         force_update_fields = ["component_system_id", "type", "timeout_time"]
+
         self.config_data.update({
             "component_codename": f"generic.cmsi.{self.cmp_name}",
             "path": self.channel_path,
@@ -107,13 +111,22 @@ class Esb_channel_plugin(object):
 
         command = Command()
         try:
+            # 尝试获取匹配的ESBChannel记录
             esb_channel = ESBChannel.objects.get(Q(path=self.channel_path) | Q(component_name=self.cmp_name))
-            command.force = None
-            esb_channel.is_active = self.is_active
-            esb_channel.path = self.channel_path
-            command.update_channel_by_config(esb_channel, self.config_data, default_update_fields, force_update_fields)
+            # 删除已存在的记录
+            esb_channel.delete()
         except ESBChannel.DoesNotExist:
-            command.create_channel_by_config(self.config_data, default_update_fields, force_update_fields)
+            pass
+
+        # 创建一个新的ESBChannel记录
+        command.create_channel_by_config(self.config_data, default_update_fields, force_update_fields)
+
+        # 获取新创建的ESBChannel记录并设置新的属性
+        esb_channel = ESBChannel.objects.get(Q(path=self.channel_path) | Q(component_name=self.cmp_name))
+        command.force = None
+        esb_channel.is_active = self.is_active
+        esb_channel.path = self.channel_path
+        esb_channel.save()
 
         # 数据库操作成功才更新mapping
         self.update_mapping()
