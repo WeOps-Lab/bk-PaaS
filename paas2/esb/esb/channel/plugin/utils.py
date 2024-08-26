@@ -60,7 +60,7 @@ class Esb_channel_plugin(object):
             "name": self.name,
             "type": self.im_channel_type,
             "cmp_name": self.cmp_name,
-            "label": self.im_channel_type,
+            "label": self.name,
             "label_en": self.im_channel_type,
             "active_icon": get_base64_icon("icons_v2/default_active.ico"),
             "unactive_icon": get_base64_icon("icons_v2/default_unactive.ico"),
