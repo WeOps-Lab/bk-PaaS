@@ -197,12 +197,13 @@ class Esb_edit_channel(Esb_channel_plugin):
         self.im_channel_type = self.body_data.get('code', '')
         self.config_data = self.body_data.get('config', '')
         self.is_active = self.config_data.get('is_active') if 'is_active' in self.config_data else True
+        self.built_in_mapping = {"weixin": "send_weixin", "mail": "send_mail", "sms": "send_sms", "voice": "send_voice_msg"}
 
     # 编辑消息通道参数
     def edit_channel(self):
         for channel in self.channels_in_database:
             if channel.extra_info:
-                if self.im_channel_type == json.loads(channel.extra_info).get("type", ""):
+                if self.im_channel_type == json.loads(channel.extra_info).get("type", "") or self.built_in_mapping.get(self.im_channel_type) == channel.component_name:
                     command = Command()
                     command.force = None
                     channel.is_active = self.is_active
