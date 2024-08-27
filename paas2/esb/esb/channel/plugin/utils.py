@@ -16,6 +16,8 @@ from components.generic.templates.cmsi.toolkit import configs as msg_type_config
 from components.esb_conf import config
 from esb.component.base import *
 
+built_in_mapping = {"weixin": "send_weixin", "mail": "send_mail", "sms": "send_sms", "voice": "send_voice_msg"}
+
 
 class Esb_channel_plugin(object):
     def __init__(self, request):
@@ -197,13 +199,12 @@ class Esb_edit_channel(Esb_channel_plugin):
         self.im_channel_type = self.body_data.get('code', '')
         self.config_data = self.body_data.get('config', '')
         self.is_active = self.config_data.get('is_active') if 'is_active' in self.config_data else True
-        self.built_in_mapping = {"weixin": "send_weixin", "mail": "send_mail", "sms": "send_sms", "voice": "send_voice_msg"}
 
     # 编辑消息通道参数
     def edit_channel(self):
         for channel in self.channels_in_database:
             if channel.extra_info:
-                if self.im_channel_type == json.loads(channel.extra_info).get("type", "") or self.built_in_mapping.get(self.im_channel_type) == channel.component_name:
+                if self.im_channel_type == json.loads(channel.extra_info).get("type", "") or built_in_mapping.get(self.im_channel_type) == channel.component_name:
                     command = Command()
                     command.force = None
                     channel.is_active = self.is_active
