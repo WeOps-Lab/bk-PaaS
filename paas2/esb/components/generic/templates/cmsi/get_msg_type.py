@@ -18,6 +18,7 @@ from common.constants import API_TYPE_Q, HTTP_METHOD
 from common.base_utils import str_bool
 from esb.bkcore.models import ComponentSystem, ESBChannel
 from components.generic.templates.cmsi.toolkit import configs as msg_type_config
+from esb.channel.plugin.utils import built_in_mapping
 from .toolkit import configs
 from .toolkit.tools import get_base64_icon
 
@@ -32,22 +33,36 @@ class GetMsgType(Component, SetupConfMixin):
 
     def handle(self):
         bk_language = self.request.headers.get("Blueking-Language", "en")
-
+        esb_conf = self.request.kwargs.get("comp_conf")
         msg_type = []
         for mt in configs.msg_type:
             is_active = mt.get("is_active", str_bool(getattr(self, mt["type"], False)))
-            msg_type.append(
-                {
-                    **({"name": mt["name"]} if "name" in mt else {}),
-                    "type": mt["type"],
-                    "icon": mt["active_icon"] if is_active else mt["unactive_icon"],
-                    "label": mt["label_en"] if bk_language == "en" else mt["label"],
-                    "is_active": is_active,
-                    **({"path": mt["path"]} if "path" in mt else {}),
-                    **({"method": mt["method"]} if "method" in mt else {}),
-                    **({"is_builtin": mt["is_builtin"]} if "is_builtin" in mt else ''),
-                }
-            )
+            msg_type_entry = {
+                **({"name": mt["name"]} if "name" in mt else {}),
+                "type": mt["type"],
+                # "icon": mt["active_icon"] if is_active else mt["unactive_icon"],
+                "label": mt["label_en"] if bk_language == "en" else mt["label"],
+                "is_active": is_active,
+                **({"path": mt["path"]} if "path" in mt else {}),
+                **({"method": mt["method"]} if "method" in mt else {}),
+                **({"is_builtin": mt["is_builtin"]} if "is_builtin" in mt else {}),
+            }
+
+            if not esb_conf:
+                msg_type_entry["icon"] = mt["active_icon"] if is_active else mt["unactive_icon"]
+
+            # 查询消息能力配置参数
+            if esb_conf:
+                component_name = built_in_mapping.get(mt["type"])
+                if component_name:
+                    try:
+                        channel = ESBChannel.objects.get(component_name=component_name)
+                        comp_conf_to_db = json.loads(channel.comp_conf)
+                    except ESBChannel.DoesNotExist:
+                        comp_conf_to_db = None
+                    msg_type_entry["comp_conf_to_db"] = comp_conf_to_db
+
+            msg_type.append(msg_type_entry)
 
         if self.request.kwargs.get("im_channel"):
             # 补充IM消息通道字段
@@ -58,18 +73,25 @@ class GetMsgType(Component, SetupConfMixin):
                 if channel.extra_info:
                     mapping = json.loads(channel.extra_info)
                     if mapping.get("type"):
-                        msg_type.append(
-                            {
-                                "name": channel.name,
-                                "type": mapping.get("type", ""),
-                                "icon": get_base64_icon("icons_v2/default_active.ico") if channel.is_active == 1 else get_base64_icon("icons_v2/default_unactive.ico"),
-                                "label": mapping.get("label_en", mapping.get("type", "")) if bk_language == "en" else mapping.get("label", ""),
-                                "is_active": "true" if channel.is_active == 1 else "false",
-                                "path": channel.path,
-                                "method":  mapping.get("method", "POST"),
-                                "is_builtin": mapping.get("is_builtin", "true"),
-                            }
-                        )
+                        im_msg_type_entry = {
+                            "name": channel.name,
+                            "type": mapping.get("type", ""),
+                            "label": mapping.get("label_en", mapping.get("type", "")) if bk_language == "en" else mapping.get("label", ""),
+                            "is_active": "true" if channel.is_active == 1 else "false",
+                            "path": channel.path,
+                            "method": mapping.get("method", "POST"),
+                            "is_builtin": mapping.get("is_builtin", "true"),
+                        }
+
+                        if not esb_conf:
+                            im_msg_type_entry["icon"] = get_base64_icon(
+                                "icons_v2/default_active.ico") if channel.is_active == 1 else get_base64_icon(
+                                "icons_v2/default_unactive.ico")
+
+                        if esb_conf:
+                            im_msg_type_entry["comp_conf_to_db"] = json.loads(channel.comp_conf)
+
+                        msg_type.append(im_msg_type_entry)
 
         self.response.payload = {
             "result": True,
