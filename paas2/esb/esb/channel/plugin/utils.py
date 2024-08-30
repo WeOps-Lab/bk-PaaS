@@ -240,8 +240,6 @@ class Esb_edit_channel(Esb_channel_plugin):
                     # 数据库操作成功才更新mapping
                     self.update_mapping()
 
-                    refresh_components_manager()
-
                     return JsonResponse({"success": True,
                                          "message": "edit successfully"})
 
