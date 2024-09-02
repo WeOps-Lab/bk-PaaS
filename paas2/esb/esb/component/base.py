@@ -29,6 +29,11 @@ from esb.utils import is_py_file, fpath_to_module, config
 from esb.utils.base import PathVars
 from esb.response import CompResponse
 from esb.bkauth.models import BKUser, AnonymousBKUser
+from healthz.errors import CheckException
+
+from django.conf import settings
+import redis
+from common.base_redis import get_redis_pool, redis_config, redis_sentinel_config
 
 
 class BaseComponent(object):
@@ -258,17 +263,17 @@ class CompRequest(object):
     ]
 
     def __init__(
-        self,
-        wsgi_request=None,
-        input=None,
-        use_test_env=False,
-        request_id=None,
-        channel_type="api",
-        is_dummy=False,
-        app_code="",
-        path_vars=None,
-        timeout=None,
-        headers={},
+            self,
+            wsgi_request=None,
+            input=None,
+            use_test_env=False,
+            request_id=None,
+            channel_type="api",
+            is_dummy=False,
+            app_code="",
+            path_vars=None,
+            timeout=None,
+            headers={},
     ):
         self.wsgi_request = wsgi_request
         # Load data from wsgi_request if given
@@ -350,7 +355,7 @@ class ComponentsManager(object):
     ]
 
     def __init__(
-        self,
+            self,
     ):
         self.name_component_map = {}
         self.path_configs = {}
@@ -454,19 +459,129 @@ class ComponentsManager(object):
 
 _components_manager = None
 
+# Lua脚本：upload插件触发，查询最大值和更新值
+REFRESH_MANAGER_SCRIPT = """
+local current_key = KEYS[1]
+local current_pid = ARGV[1]
+local pattern = "esb_cmp_*"
+
+-- 获取所有匹配键的最大值
+local keys = redis.call('keys', pattern)
+local max_count = 0
+for _, key in ipairs(keys) do
+    local value = tonumber(redis.call('get', key))
+    if value and value > max_count then
+        max_count = value
+    end
+end
+
+-- 获取当前进程的计数
+local current_value = tonumber(redis.call('get', current_key)) or 0
+
+-- 计算新的计数值
+local new_count = current_value + 1
+if new_count < max_count then
+    new_count = max_count
+end
+
+-- 更新当前进程的计数
+redis.call('set', current_key, new_count, 'EX', 60)
+
+return new_count
+"""
+
+# Lua脚本：查询最大值
+REFRESH_MANAGER_SCRIPT_COND = """
+local current_key = KEYS[1]
+local current_pid = ARGV[1]
+local pattern = "esb_cmp_*"
+
+-- 获取所有匹配键的最大值
+local keys = redis.call('keys', pattern)
+local max_count = 0
+for _, key in ipairs(keys) do
+    local value = tonumber(redis.call('get', key))
+    if value and value > max_count then
+        max_count = value
+    end
+end
+
+-- 获取当前进程的计数
+local current_value = tonumber(redis.call('get', current_key)) or 0
+
+-- 计算新的计数值
+local update = 0
+local new_count = current_value
+if new_count < max_count then
+    new_count = max_count
+    update = 1
+    redis.call('set', current_key, new_count, 'EX', 60) 
+end
+
+return {new_count, update}
+"""
+
+def get_redis_client():
+    """
+    获取Redis客户端
+    """
+    try:
+        return redis.Redis(connection_pool=get_redis_pool(redis_config, redis_sentinel_config))
+    except Exception as ex:
+        raise CheckException(
+            f"Exception occurred in Redis connection "
+            f"([{settings.REDIS_HOST}:{settings.REDIS_PORT}] [use_sentinel={getattr(settings, 'USE_SENTINEL', False)}]): {ex}"
+        )
 
 def get_components_manager():
     """
     获取当前注册的components_manager
     """
     global _components_manager
+    client = get_redis_client()
+
+    # 获取当前进程的PID
+    current_pid = os.getpid()
+    current_key = f"esb_cmp_{current_pid}"
+
+    # 使用Lua脚本获取并更新计数
+    result = client.eval(REFRESH_MANAGER_SCRIPT_COND, 1, current_key, current_pid)
+    new_count = result[0]
+    updated = result[1]
+
+    # 如果当前进程的计数小于最大计数，则刷新
+    if _components_manager is not None and updated == 1:
+        logger.debug(f"Process {current_pid} Refreshing components manager. new count is < {new_count} >")
+        _components_manager = None  # 触发刷新
+
     if _components_manager is None:
         manager = ComponentsManager()
         manager.register_by_config(config.ESB_CONFIG["config"].get("component_groups", []))
         _components_manager = manager
+
     return _components_manager
 
-
 def refresh_components_manager():
-    global _components_manager
-    _components_manager = None
+    """
+    刷新components_manager缓存
+    """
+    client = get_redis_client()
+    current_pid = os.getpid()
+    current_key = f"esb_cmp_{current_pid}"
+
+    try:
+        logger.debug(f"{current_pid} refreshing components manager")
+
+        # 使用Lua脚本更新当前进程的计数
+        client.eval(
+            REFRESH_MANAGER_SCRIPT,
+            1,
+            current_key,
+            current_pid
+        )
+
+    except Exception as ex:
+        raise CheckException(
+            f"Exception occurred in Redis connection "
+            f"([{settings.REDIS_HOST}:{settings.REDIS_PORT}] [use_sentinel={getattr(settings, 'USE_SENTINEL', False)}]): {ex}"
+        )
