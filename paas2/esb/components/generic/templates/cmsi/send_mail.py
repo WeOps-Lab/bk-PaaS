@@ -87,6 +87,9 @@ class SendMail(Component, SetupConfMixin):
         # 1. 在 ./toolkit/configs.py 更新 SMTP 配置或第三方接口配置
         # 2. 在 ESB 管理页面，修改"发送邮件"通道的"组件配置"
 
+        # weops定开标识
+        self.weops_custom_csmi = getattr(self, "weops_custom_csmi", "False")
+
         # SMTP 配置，具体更新配置的方式参考上文描述
         self.smtp_host = getattr(self, "smtp_host", "") or getattr(configs, "smtp_host", "")
         self.smtp_port = getattr(self, "smtp_port", None) or getattr(configs, "smtp_port", None)
@@ -102,68 +105,70 @@ class SendMail(Component, SetupConfMixin):
         self.dest_url = getattr(self, "dest_url", "") or getattr(configs, "dest_url", "")
 
         data = self.request.kwargs
-        # 检验接收者邮箱格式
-        if data["receiver"]:
-            tools.validate_receiver(data["receiver"], contact_way=self.contact_way)
-        if data["cc"]:
-            tools.validate_receiver(data["cc"], contact_way=self.contact_way)
-        # 根据蓝鲸平台用户数据，将用户名转换为邮箱地址
-        if data["receiver__username"] or data["cc__username"]:
-            try:
-                user_data = tools.get_receiver_with_username(
-                    receiver__username=data["receiver__username"],
-                    cc__username=data["cc__username"],
-                    contact_way=self.contact_way,
+        # 内置原始消息能力
+        if self.weops_custom_csmi == "False":
+            # 检验接收者邮箱格式
+            if data["receiver"]:
+                tools.validate_receiver(data["receiver"], contact_way=self.contact_way)
+            if data["cc"]:
+                tools.validate_receiver(data["cc"], contact_way=self.contact_way)
+            # 根据蓝鲸平台用户数据，将用户名转换为邮箱地址
+            if data["receiver__username"] or data["cc__username"]:
+                try:
+                    user_data = tools.get_receiver_with_username(
+                        receiver__username=data["receiver__username"],
+                        cc__username=data["cc__username"],
+                        contact_way=self.contact_way,
+                    )
+                except tools.NoValidUser as err:
+                    result = {
+                        "result": False,
+                        "message": force_text(err),
+                    }
+                    self.response.payload = tools.inject_invalid_usernames(result, err.invalid_usernames)
+                    return
+
+                data.update(user_data)
+
+            if not data["sender"]:
+                data["sender"] = self.mail_sender
+
+            if self.dest_url:
+                # 如果配置了第三方接口地址，则请求第三方接口实现邮件发送
+                # 注意：如果通过第三方接口，则第三方接口协议需兼容组件参数
+                result = self.outgoing.http_client.request_by_url("POST", self.dest_url, data=json.dumps(data))
+
+                if result["result"] and data.get("_extra_user_error_msg"):
+                    result = {
+                        "result": False,
+                        "message": u"Some users failed to send email. %s" % data["_extra_user_error_msg"],
+                    }
+                self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
+
+            elif self.smtp_host:
+                # 如果配置了 SMTP 服务，则通过 SMTP 邮件服务器，发送邮件
+                # 具体更新配置的方式参考上文描述
+                smtp_client = send_mail_with_smtp.SMTPClient(
+                    smtp_host=self.smtp_host,
+                    smtp_port=int(self.smtp_port or 25),
+                    smtp_user=self.smtp_user,
+                    smtp_pwd=self.smtp_pwd,
+                    smtp_usessl=self.smtp_usessl,
+                    smtp_usetls=self.smtp_usetls,
+                    smtp_timeout=self.smtp_timeout,
                 )
-            except tools.NoValidUser as err:
+                result = smtp_client.send_mail(data)
+
+                if result["result"] and data.get("_extra_user_error_msg"):
+                    result = {
+                        "result": False,
+                        "message": u"Some users failed to send email. %s" % data["_extra_user_error_msg"],
+                    }
+
+                self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
+            else:
                 result = {
                     "result": False,
-                    "message": force_text(err),
+                    "message": "Unfinished interface shall be improved by the component developer",
                 }
-                self.response.payload = tools.inject_invalid_usernames(result, err.invalid_usernames)
-                return
-
-            data.update(user_data)
-
-        if not data["sender"]:
-            data["sender"] = self.mail_sender
-
-        if self.dest_url:
-            # 如果配置了第三方接口地址，则请求第三方接口实现邮件发送
-            # 注意：如果通过第三方接口，则第三方接口协议需兼容组件参数
-            result = self.outgoing.http_client.request_by_url("POST", self.dest_url, data=json.dumps(data))
-
-            if result["result"] and data.get("_extra_user_error_msg"):
-                result = {
-                    "result": False,
-                    "message": u"Some users failed to send email. %s" % data["_extra_user_error_msg"],
-                }
-            self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
-
-        elif self.smtp_host:
-            # 如果配置了 SMTP 服务，则通过 SMTP 邮件服务器，发送邮件
-            # 具体更新配置的方式参考上文描述
-            smtp_client = send_mail_with_smtp.SMTPClient(
-                smtp_host=self.smtp_host,
-                smtp_port=int(self.smtp_port or 25),
-                smtp_user=self.smtp_user,
-                smtp_pwd=self.smtp_pwd,
-                smtp_usessl=self.smtp_usessl,
-                smtp_usetls=self.smtp_usetls,
-                smtp_timeout=self.smtp_timeout,
-            )
-            result = smtp_client.send_mail(data)
-
-            if result["result"] and data.get("_extra_user_error_msg"):
-                result = {
-                    "result": False,
-                    "message": u"Some users failed to send email. %s" % data["_extra_user_error_msg"],
-                }
-
-            self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
-        else:
-            result = {
-                "result": False,
-                "message": "Unfinished interface shall be improved by the component developer",
-            }
-            self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
+                self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
