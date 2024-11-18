@@ -57,64 +57,70 @@ class SendSms(Component, SetupConfMixin):
             return data
 
     def handle(self):
+        # weops定开标识
+        self.weops_custom_csmi = getattr(self, "weops_custom_csmi", "False")
+
         # QCloud 短信配置
         self.qcloud_app_id = getattr(self, "qcloud_app_id", "") or getattr(configs, "qcloud_app_id", "")
         self.qcloud_app_key = getattr(self, "qcloud_app_key", "") or getattr(configs, "qcloud_app_key", "")
         self.qcloud_sms_sign = getattr(self, "qcloud_sms_sign", "") or getattr(configs, "qcloud_sms_sign", "")
 
         data = self.request.kwargs
-        if data["receiver"]:
-            tools.validate_receiver(data["receiver"], contact_way=self.contact_way)
-        if data["receiver__username"]:
-            try:
-                user_data = tools.get_receiver_with_username(
-                    receiver__username=data["receiver__username"], contact_way=self.contact_way
-                )
-            except tools.NoValidUser as err:
-                result = {
-                    "result": False,
-                    "message": force_text(err),
-                }
-                self.response.payload = tools.inject_invalid_usernames(result, err.invalid_usernames)
-                return
 
-            data.update(user_data)
-
-        # TODO: can be updated
-        if self.dest_url:
-            result = self.outgoing.http_client.request_by_url("POST", self.dest_url, data=json.dumps(data))
-
-            if result["result"] and data.get("_extra_user_error_msg"):
-                result = {
-                    "result": False,
-                    "message": u"Some users failed to send sms. %s" % data["_extra_user_error_msg"],
-                }
-
-            self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
-        elif self.qcloud_app_id and self.qcloud_app_key:
-            for tel in tools.group_by_nation_code(data["receiver"]):
-                params = {
-                    "sms_type": 0,
-                    "tel": tel,
-                    "content": data["content"],
-                    "sdk_app_id": self.qcloud_app_id,
-                    "app_key": self.qcloud_app_key,
-                    "sms_sign": self.qcloud_sms_sign,
-                }
-                result = self.invoke_other("generic.qcloud_sms.send_multi_sms", kwargs=params)
-                if not result["result"]:
-                    self.response.payload = result
+        # 内置原始消息能力
+        if self.weops_custom_csmi == "False":
+            if data["receiver"]:
+                tools.validate_receiver(data["receiver"], contact_way=self.contact_way)
+            if data["receiver__username"]:
+                try:
+                    user_data = tools.get_receiver_with_username(
+                        receiver__username=data["receiver__username"], contact_way=self.contact_way
+                    )
+                except tools.NoValidUser as err:
+                    result = {
+                        "result": False,
+                        "message": force_text(err),
+                    }
+                    self.response.payload = tools.inject_invalid_usernames(result, err.invalid_usernames)
                     return
 
-            if result["result"] and data.get("_extra_user_error_msg"):
+                data.update(user_data)
+
+            # TODO: can be updated
+            if self.dest_url:
+                result = self.outgoing.http_client.request_by_url("POST", self.dest_url, data=json.dumps(data))
+
+                if result["result"] and data.get("_extra_user_error_msg"):
+                    result = {
+                        "result": False,
+                        "message": u"Some users failed to send sms. %s" % data["_extra_user_error_msg"],
+                    }
+
+                self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
+            elif self.qcloud_app_id and self.qcloud_app_key:
+                for tel in tools.group_by_nation_code(data["receiver"]):
+                    params = {
+                        "sms_type": 0,
+                        "tel": tel,
+                        "content": data["content"],
+                        "sdk_app_id": self.qcloud_app_id,
+                        "app_key": self.qcloud_app_key,
+                        "sms_sign": self.qcloud_sms_sign,
+                    }
+                    result = self.invoke_other("generic.qcloud_sms.send_multi_sms", kwargs=params)
+                    if not result["result"]:
+                        self.response.payload = result
+                        return
+
+                if result["result"] and data.get("_extra_user_error_msg"):
+                    result = {
+                        "result": False,
+                        "message": u"Some users failed to send sms. %s" % data["_extra_user_error_msg"],
+                    }
+                self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
+            else:
                 result = {
                     "result": False,
-                    "message": u"Some users failed to send sms. %s" % data["_extra_user_error_msg"],
+                    "message": "Unfinished interface shall be improved by the component developer",
                 }
-            self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
-        else:
-            result = {
-                "result": False,
-                "message": "Unfinished interface shall be improved by the component developer",
-            }
-            self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
+                self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))

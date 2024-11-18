@@ -63,75 +63,81 @@ class SendVoiceMsg(Component, SetupConfMixin):
             return data
 
     def handle(self):
+        # weops定开标识
+        self.weops_custom_csmi = getattr(self, "weops_custom_csmi", "False")
+
         # QCloud 语音配置
         self.qcloud_app_id = getattr(self, "qcloud_app_id", "") or getattr(configs, "qcloud_app_id", "")
         self.qcloud_app_key = getattr(self, "qcloud_app_key", "") or getattr(configs, "qcloud_app_key", "")
 
         data = self.form_data
-        # 将 receiver__username 中的用户名，转换为接口需要的 user_list_information 信息
-        if data["receiver__username"]:
-            try:
-                user_data = tools.get_user_contact_with_username(
-                    username_list=data["receiver__username"],
-                    contact_way=self.contact_way,
-                )
-            except tools.NoValidUser as err:
-                result = {
-                    "result": False,
-                    "message": force_text(err),
-                }
-                self.response.payload = tools.inject_invalid_usernames(result, err.invalid_usernames)
-                return
 
-            data["user_list_information"] = [
-                {
-                    "username": username,
-                    "mobile_phone": contact_info["telephone"],
-                    "nation_code": contact_info.get("nation_code"),
-                }
-                for username, contact_info in list(user_data["user_contact_info"].items())
-            ]
-            data["_extra_user_error_msg"] = user_data["_extra_user_error_msg"]
+        # 内置原始消息能力
+        if self.weops_custom_csmi == "False":
+            # 将 receiver__username 中的用户名，转换为接口需要的 user_list_information 信息
+            if data["receiver__username"]:
+                try:
+                    user_data = tools.get_user_contact_with_username(
+                        username_list=data["receiver__username"],
+                        contact_way=self.contact_way,
+                    )
+                except tools.NoValidUser as err:
+                    result = {
+                        "result": False,
+                        "message": force_text(err),
+                    }
+                    self.response.payload = tools.inject_invalid_usernames(result, err.invalid_usernames)
+                    return
 
-        # TODO: can be updated
-        if self.dest_url:
-            result = self.outgoing.http_client.request_by_url("POST", self.dest_url, data=json.dumps(data))
+                data["user_list_information"] = [
+                    {
+                        "username": username,
+                        "mobile_phone": contact_info["telephone"],
+                        "nation_code": contact_info.get("nation_code"),
+                    }
+                    for username, contact_info in list(user_data["user_contact_info"].items())
+                ]
+                data["_extra_user_error_msg"] = user_data["_extra_user_error_msg"]
 
-            if result["result"] and data.get("_extra_user_error_msg"):
-                result = {
-                    "result": False,
-                    "data": result.get("data"),
-                    "message": u"Some users failed to send voice. %s" % data["_extra_user_error_msg"],
-                }
-            self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
-        elif self.qcloud_app_id and self.qcloud_app_key:
-            params = {
-                "user_list_information": data["user_list_information"],
-                "auto_read_message": data["auto_read_message"],
-                "qcloud_app_id": self.qcloud_app_id,
-                "qcloud_app_key": self.qcloud_app_key,
-            }
-            ret = self.invoke_other("generic.qcloud_voice.send_voice_msg", kwargs=params)
+            # TODO: can be updated
+            if self.dest_url:
+                result = self.outgoing.http_client.request_by_url("POST", self.dest_url, data=json.dumps(data))
 
-            if not ret["failed"] and data.get("_extra_user_error_msg"):
-                result = {
-                    "result": False,
-                    "data": ret,
-                    "message": u"Some users failed to send voice. %s" % data["_extra_user_error_msg"],
+                if result["result"] and data.get("_extra_user_error_msg"):
+                    result = {
+                        "result": False,
+                        "data": result.get("data"),
+                        "message": u"Some users failed to send voice. %s" % data["_extra_user_error_msg"],
+                    }
+                self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
+            elif self.qcloud_app_id and self.qcloud_app_key:
+                params = {
+                    "user_list_information": data["user_list_information"],
+                    "auto_read_message": data["auto_read_message"],
+                    "qcloud_app_id": self.qcloud_app_id,
+                    "qcloud_app_key": self.qcloud_app_key,
                 }
-            elif ret["failed"]:
-                result = {
-                    "result": False,
-                    "data": ret,
-                    "message": "Some users failed to send voice. %s"
-                    % ",".join([x["username"] for x in ret["failed"]]),
-                }
+                ret = self.invoke_other("generic.qcloud_voice.send_voice_msg", kwargs=params)
+
+                if not ret["failed"] and data.get("_extra_user_error_msg"):
+                    result = {
+                        "result": False,
+                        "data": ret,
+                        "message": u"Some users failed to send voice. %s" % data["_extra_user_error_msg"],
+                    }
+                elif ret["failed"]:
+                    result = {
+                        "result": False,
+                        "data": ret,
+                        "message": "Some users failed to send voice. %s"
+                        % ",".join([x["username"] for x in ret["failed"]]),
+                    }
+                else:
+                    result = {"result": True, "data": ret, "message": "OK"}
+                self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
             else:
-                result = {"result": True, "data": ret, "message": "OK"}
-            self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
-        else:
-            result = {
-                "result": False,
-                "message": "Unfinished interface shall be improved by the component developer",
-            }
-            self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
+                result = {
+                    "result": False,
+                    "message": "Unfinished interface shall be improved by the component developer",
+                }
+                self.response.payload = tools.inject_invalid_usernames(result, data.get("_invalid_usernames"))
