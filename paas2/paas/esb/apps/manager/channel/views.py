@@ -284,6 +284,10 @@ class EditChannelView(View, TemplateRenderMixin):
                         "key": "mail_sender",
                         "value": comp_conf.get("mail_sender", ""),
                     },
+                    {
+                        "key": "weops_custom_csmi",
+                        "value": comp_conf.get("weops_custom_csmi", ""),
+                    },
                 ]
             }
         elif path == "/cmsi/send_sms/":
@@ -308,6 +312,10 @@ class EditChannelView(View, TemplateRenderMixin):
                         "key": "qcloud_sms_sign",
                         "value": comp_conf.get("qcloud_sms_sign", ""),
                     },
+                    {
+                        "key": "weops_custom_csmi",
+                        "value": comp_conf.get("weops_custom_csmi", ""),
+                    },
                 ]
             }
         elif path == "/cmsi/send_voice_msg/":
@@ -327,6 +335,10 @@ class EditChannelView(View, TemplateRenderMixin):
                         "key": "qcloud_app_key",
                         "value": comp_conf.get("qcloud_app_key", ""),
                         "text_type": "password",
+                    },
+                    {
+                        "key": "weops_custom_csmi",
+                        "value": comp_conf.get("weops_custom_csmi", ""),
                     },
                 ]
             }
