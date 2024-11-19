@@ -44,51 +44,52 @@ class Command(BaseCommand):
 
         conf_client = conf_tools.ConfClient()
         for system_name, channels in list(conf_client.channels.items()):
-            try:
-                system = ComponentSystem.objects.get(name=system_name)
-            except ComponentSystem.DoesNotExist:
-                continue
+            if system_name == "CMSI":
+                try:
+                    system = ComponentSystem.objects.get(name=system_name)
+                except ComponentSystem.DoesNotExist:
+                    continue
 
-            for channel in channels:
-                # 只更新短信、邮件、语音通知
-                if channel["path"] == "/cmsi/send_sms/" or channel["path"] == "/cmsi/send_mail/" or channel["path"] == "/cmsi/send_voice_msg/":
-                    try:
-                        esb_channel = ESBChannel.objects.get(path=channel["path"])
-                    except ESBChannel.DoesNotExist:
-                        continue
-                    else:
-                        is_hidden = channel.get("is_hidden", False)
-                        is_deprecated = channel.get("is_deprecated", False)
-                        is_hidden = is_hidden or is_deprecated
+                for channel in channels:
+                    # 只更新短信、邮件、语音通知
+                    if channel["path"] == "/cmsi/send_sms/" or channel["path"] == "/cmsi/send_mail/" or channel["path"] == "/cmsi/send_voice_msg/":
+                        try:
+                            esb_channel = ESBChannel.objects.get(path=channel["path"])
+                        except ESBChannel.DoesNotExist:
+                            continue
+                        else:
+                            is_hidden = channel.get("is_hidden", False)
+                            is_deprecated = channel.get("is_deprecated", False)
+                            is_hidden = is_hidden or is_deprecated
 
-                        channel["name"] = channel["component_label"]
-                        channel["type"] = 2 if channel["component_type"] == API_TYPE_Q else 1
-                        channel["is_hidden"] = is_hidden
-                        channel["component_system_id"] = system.id
-                        channel["component_codename"] = channel["comp_codename"]
-                        channel["extra_info"] = {
-                            "is_confapi": channel.get("is_confapi", False),
-                            "label_en": channel.get("label_en", ""),
-                            "suggest_method": channel.get("suggest_method", ""),
-                        }
+                            channel["name"] = channel["component_label"]
+                            channel["type"] = 2 if channel["component_type"] == API_TYPE_Q else 1
+                            channel["is_hidden"] = is_hidden
+                            channel["component_system_id"] = system.id
+                            channel["component_codename"] = channel["comp_codename"]
+                            channel["extra_info"] = {
+                                "is_confapi": channel.get("is_confapi", False),
+                                "label_en": channel.get("label_en", ""),
+                                "suggest_method": channel.get("suggest_method", ""),
+                            }
 
-                        # 将 `comp_conf` 解析为列表
-                        channel["comp_conf"] = json.loads(esb_channel.comp_conf)
+                            # 将 `comp_conf` 解析为列表
+                            channel["comp_conf"] = json.loads(esb_channel.comp_conf)
 
-                        # 转换列表为字典以方便处理
-                        comp_conf_dict = {item[0]: item[1] for item in channel["comp_conf"]}
+                            # 转换列表为字典以方便处理
+                            comp_conf_dict = {item[0]: item[1] for item in channel["comp_conf"]}
 
-                        # 查询并新增 "weops_custom_csmi", 如果其不存在
-                        if "weops_custom_csmi" not in comp_conf_dict:
-                            channel["comp_conf"].append(["weops_custom_csmi", "False"])
+                            # 查询并新增 "weops_custom_csmi", 如果其不存在
+                            if "weops_custom_csmi" not in comp_conf_dict:
+                                channel["comp_conf"].append(["weops_custom_csmi", "False"])
 
-                            # 确保转换为 JSON 字符串时使用双引号
-                            comp_conf_json = json.dumps(channel["comp_conf"], ensure_ascii=False)
+                                # 确保转换为 JSON 字符串时使用双引号
+                                comp_conf_json = json.dumps(channel["comp_conf"], ensure_ascii=False)
 
-                            # 更新 `channel["comp_conf"]`
-                            channel["comp_conf"] = comp_conf_json
-                            self._update_channel_by_config(esb_channel, channel, ["comp_conf"],"")
-                            logger.info("id: %s, name: %s, path: %s update success" % (esb_channel.id, esb_channel.name, esb_channel.path))
+                                # 更新 `channel["comp_conf"]`
+                                channel["comp_conf"] = comp_conf_json
+                                self._update_channel_by_config(esb_channel, channel, ["comp_conf"],"")
+                                logger.info("id: %s, name: %s, path: %s update success" % (esb_channel.id, esb_channel.name, esb_channel.path))
 
 
 
