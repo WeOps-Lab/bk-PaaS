@@ -53,7 +53,7 @@ class Command(BaseCommand):
                 # 只更新短信、邮件、语音通知
                 if channel["path"] == "/cmsi/send_sms/" or channel["path"] == "/cmsi/send_mail/" or channel["path"] == "/cmsi/send_voice_msg/":
                     try:
-                        esb_channel = ESBChannel.objects.get(path=channel["path"], method=channel["method"])
+                        esb_channel = ESBChannel.objects.get(path=channel["path"])
                     except ESBChannel.DoesNotExist:
                         continue
                     else:
