@@ -35,7 +35,7 @@ class GetMsgType(Component, SetupConfMixin):
         bk_language = self.request.headers.get("Blueking-Language", "en")
         esb_conf = self.request.kwargs.get("comp_conf")
         msg_type = []
-
+        built_in_channel_path = []
         system_id = ComponentSystem.objects.get(name=msg_type_config.SYSTEM_NAME).id
         channels = ESBChannel.objects.filter_channels([system_id], is_hidden=None, is_active=None)
 
@@ -51,6 +51,7 @@ class GetMsgType(Component, SetupConfMixin):
                 **({"method": mt["method"]} if "method" in mt else {}),
                 **({"is_builtin": mt["is_builtin"]} if "is_builtin" in mt else {}),
             }
+            built_in_channel_path.append(mt["path"]) # 记录内置消息能力路径
 
             if not esb_conf:
                 msg_type_entry["icon"] = mt["active_icon"] if is_active else mt["unactive_icon"]
@@ -70,11 +71,10 @@ class GetMsgType(Component, SetupConfMixin):
 
         if self.request.kwargs.get("im_channel"):
             # 补充IM消息通道字段
-
             for channel in channels:
                 if channel.extra_info:
                     mapping = json.loads(channel.extra_info)
-                    if mapping.get("type"):
+                    if mapping.get("type") and channel.path not in built_in_channel_path:  # 仅展示有type的消息通道且不在内置消息通道路径的
                         im_msg_type_entry = {
                             "name": channel.name,
                             "type": mapping.get("type", ""),
