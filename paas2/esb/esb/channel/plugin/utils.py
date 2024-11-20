@@ -8,6 +8,7 @@ import tempfile
 from django.db.models import Q
 
 from common.django_utils import JsonResponse
+from components.generic.templates.cmsi.toolkit.configs import msg_type_map
 from components.generic.templates.cmsi.toolkit.tools import get_base64_icon
 from conf.default import BASE_DIR
 from esb.bkcore.models import ESBChannel, ComponentSystem
@@ -58,23 +59,26 @@ class Esb_channel_plugin(object):
                                              "message": f"Cannot modify existing type: {self.im_channel_type} with different path and cmp_name together"})
 
     def update_mapping(self):
-        item_data = {
-            "name": self.name,
-            "type": self.im_channel_type,
-            "cmp_name": self.cmp_name,
-            "label": self.name,
-            "label_en": self.im_channel_type,
-            "active_icon": get_base64_icon("icons_v2/default_active.ico"),
-            "unactive_icon": get_base64_icon("icons_v2/default_unactive.ico"),
-            "is_active": self.is_active,
-            "path": self.channel_path,
-            "method": self.channel_method,
-            "is_builtin": False,
-        }
-
         channel = ESBChannel.objects.get(Q(path=self.channel_path) | Q(component_name=self.cmp_name))
         if channel:
-            # 判断是否需要删除目录
+            if self.im_channel_type not in msg_type_map:
+                item_data = {
+                    "name": self.name,
+                    "type": self.im_channel_type,
+                    "cmp_name": self.cmp_name,
+                    "label": self.name,
+                    "label_en": self.im_channel_type,
+                    "active_icon": get_base64_icon("icons_v2/default_active.ico"),
+                    "unactive_icon": get_base64_icon("icons_v2/default_unactive.ico"),
+                    "is_active": self.is_active,
+                    "path": self.channel_path,
+                    "method": self.channel_method,
+                    "is_builtin": False,
+                }
+            else:
+                item_data = json.loads(channel.extra_info)
+
+                # 判断是否需要删除目录
             extra_info = json.loads(channel.extra_info)
             if extra_info.get('type') != self.im_channel_type:
                 old_plugin_dir = os.path.join(BASE_DIR, 'components', 'generic', 'templates', 'cmsi', 'plugins',
@@ -226,13 +230,12 @@ class Esb_edit_channel(Esb_channel_plugin):
                                     entry[1] = value  # 更新值
 
                     # 不允许修改extra_info
-                    self.config_data.setdefault("extra_info", {"is_confapi": True, "label_en": f"{self.cmp_name}",
-                                                 "suggest_method": self.channel_method})
+                    self.config_data.setdefault("extra_info", json.loads(channel.extra_info))
 
                     self.config_data.update({
                         "path": self.channel_path,
                         "comp_conf_to_db": origin_comp_conf,
-                        "method": self.channel_method
+                        "method": self.channel_method,
                     })
 
                     command.update_channel_by_config(channel, self.config_data, [], [])
