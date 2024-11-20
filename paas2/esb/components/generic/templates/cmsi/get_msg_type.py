@@ -35,8 +35,12 @@ class GetMsgType(Component, SetupConfMixin):
         bk_language = self.request.headers.get("Blueking-Language", "en")
         esb_conf = self.request.kwargs.get("comp_conf")
         msg_type = []
+
+        system_id = ComponentSystem.objects.get(name=msg_type_config.SYSTEM_NAME).id
+        channels = ESBChannel.objects.filter_channels([system_id], is_hidden=None, is_active=None)
+
         for mt in configs.msg_type:
-            is_active = mt.get("is_active", str_bool(getattr(self, mt["type"], False)))
+            is_active = "true" if channels.get(path=mt["path"]).is_active == 1 else "false"
             msg_type_entry = {
                 **({"name": mt["name"]} if "name" in mt else {}),
                 "type": mt["type"],
@@ -66,8 +70,6 @@ class GetMsgType(Component, SetupConfMixin):
 
         if self.request.kwargs.get("im_channel"):
             # 补充IM消息通道字段
-            system_id = ComponentSystem.objects.get(name=msg_type_config.SYSTEM_NAME).id
-            channels = ESBChannel.objects.filter_channels([system_id], is_hidden=None, is_active=None)
 
             for channel in channels:
                 if channel.extra_info:
