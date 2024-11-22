@@ -240,6 +240,11 @@ class Esb_edit_channel(Esb_channel_plugin):
 
                     command.update_channel_by_config(channel, self.config_data, [], [])
 
+                    # 避免内置消息能力和confapi为true的消息能力无法修改变量
+                    if not channel.is_confapi:
+                        channel.comp_conf = json.dumps(origin_comp_conf)
+                        channel.save()
+
                     # 数据库操作成功才更新mapping
                     self.update_mapping()
 
