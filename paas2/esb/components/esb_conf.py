@@ -114,6 +114,7 @@ config = {
                         "is_hidden": True,
                     }),
                     ("/v2/cc/search_module/", {"comp_codename": "generic.v2.cc.search_module"}),
+                    ("/v2/cc/search_host/", {"comp_codename": "generic.v2.cc.search_host"}),
                     ("/v2/cc/search_set/", {"comp_codename": "generic.v2.cc.search_set"}),
                     ("/v2/cc/transfer_host_module/", {"comp_codename": "generic.v2.cc.transfer_host_module"}),
                     (
